@@ -80,9 +80,28 @@ const typeDefs= `
     }
 
     type Mutation{
-        createUser(name: String!, email: String!, age: String) : User!
-        createPost(title: String!,body: String!,published: Boolean!,author: ID!): Post!
-        createComment(text: String!, author: ID!, post: ID!) : Comment!
+        createUser(data: createUserInput) : User!
+        createPost(data: createPostInput): Post!
+        createComment(data: createCommentInput) : Comment!
+    }
+
+    input createUserInput{
+        name:String!
+        email:String!
+        age:Int
+    }
+
+    input createPostInput{
+        title: String!,
+        body: String!,
+        published: Boolean!,
+        author: ID!
+    }
+    
+    input createCommentInput{
+        text: String!, 
+        author: ID!, 
+        post: ID!
     }
 
     type Post{
@@ -140,14 +159,14 @@ const resolvers={
 
     Mutation :{
         createUser(parent,args,ctx,info){
-            const emailTaken=users.some((user) => user.email=== args.email)
+            const emailTaken=users.some((user) => user.email=== args.data.email)
 
             if(emailTaken)
                 throw new Error("Email Taken.")
             
             const user={
                 id:uuidv4(),
-                ...args
+                ...args.data
             }  
             
             users.push(user)
@@ -157,14 +176,14 @@ const resolvers={
         },
 
         createPost(parent,args,ctx,info){
-            const userExists=users.some((user) => user.id===args.author)
+            const userExists=users.some((user) => user.id===args.data.author)
 
             if(!userExists)
                 throw new Error("User not exists.")
 
             const post={
                 id:uuidv4(),
-                ...args
+                ...args.data
             } 
             
             posts.push(post)
@@ -173,21 +192,19 @@ const resolvers={
         },
 
         createComment(parent,args,ctx,info){
-            const userExists=users.some((user) => user.id===args.author)
+            const userExists=users.some((user) => user.id===args.data.author)
 
             if(!userExists)
                 throw new Error("User not exists")
             
-            const postExists=posts.some((post) => post.id===args.post && post.published===true)
+            const postExists=posts.some((post) => post.id===args.data.post && post.published===true)
 
             if(!postExists)
                 throw new Error("Post not exists or it is not published.")
             
             const comment={
                 id:uuidv4(),
-                text:args.text,
-                author:args.author,
-                post:args.post
+                ...args.data
             }
 
             comments.push(comment)

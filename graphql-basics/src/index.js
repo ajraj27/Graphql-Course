@@ -1,7 +1,7 @@
 import {GraphQLServer} from 'graphql-yoga'
 import uuidv4 from 'uuid/v4'
 
-const users=[
+let users=[
     {
         'id':'1',
         'name':'anuj',
@@ -22,7 +22,7 @@ const users=[
     }
 ]
 
-const posts=[
+let posts=[
     {
         'id':'1',
         'title':'GraphQL coures 101',
@@ -45,7 +45,7 @@ const posts=[
     }
 ]
 
-const comments=[
+let comments=[
     {
         'id':'1',
         'text':'First Comment',
@@ -80,9 +80,10 @@ const typeDefs= `
     }
 
     type Mutation{
-        createUser(data: createUserInput) : User!
-        createPost(data: createPostInput): Post!
-        createComment(data: createCommentInput) : Comment!
+        createUser(data: createUserInput!) : User!
+        createPost(data: createPostInput!): Post!
+        createComment(data: createCommentInput!) : Comment!
+        deleteUser(id:ID!): User!
     }
 
     input createUserInput{
@@ -211,6 +212,29 @@ const resolvers={
 
             return comment
 
+        },
+
+        deleteUser(parent,args,ctx,info){
+            const userIndex=users.findIndex((user) => user.id===args.id)
+
+            if(userIndex===-1)
+                throw new error('Theres no error with this id')
+            
+            const deletedUsers=users.splice(userIndex,1);
+
+            posts=posts.filter((post) => {
+                const match=post.author===args.id
+
+                if(match){
+                    comments=comments.filter((comment) => comment.post===post.id)
+                }
+
+                return !match
+            })
+
+            comments=comments.filter((comment) => comment.author===args.id)
+            
+            return deletedUsers[0]
         }
     },
 
@@ -243,3 +267,4 @@ const resolvers={
 const server = new GraphQLServer({typeDefs,resolvers})
 
 server.start(() => console.log('Server started on port 4000'))
+

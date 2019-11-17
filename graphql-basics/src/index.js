@@ -84,6 +84,7 @@ const typeDefs= `
         createPost(data: createPostInput!): Post!
         createComment(data: createCommentInput!) : Comment!
         deleteUser(id:ID!): User!
+        deletePost(id: ID!) : Post!
     }
 
     input createUserInput{
@@ -226,15 +227,27 @@ const resolvers={
                 const match=post.author===args.id
 
                 if(match){
-                    comments=comments.filter((comment) => comment.post===post.id)
+                    comments=comments.filter((comment) => comment.post!==post.id)
                 }
 
                 return !match
             })
 
-            comments=comments.filter((comment) => comment.author===args.id)
+            comments=comments.filter((comment) => comment.author!==args.id)
             
             return deletedUsers[0]
+        },
+
+        deletePost(parent,args,ctx,info){
+            const postIndex=posts.findIndex((post) => post.id===args.id)
+            if(postIndex===-1)
+                throw new error("Post doesn't exist.")
+
+            const deletedPosts=posts.splice(postIndex,1)
+            
+            comments=comments.filter((comment) => comment.post!==args.id)
+
+            return deletedPosts[0]
         }
     },
 

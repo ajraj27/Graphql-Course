@@ -32,7 +32,12 @@ const Mutation = {
         db.posts.push(post)
         
         if(post.published)
-            pubsub.publish('post',{post})
+            pubsub.publish('post',{
+                post:{
+                    mutation:'CREATED',
+                    data:post
+                }
+            })
 
         return post
     },
@@ -110,7 +115,7 @@ const Mutation = {
         return user
     },
 
-    deletePost(parent,args,{db},info){
+    deletePost(parent,args,{db,pubsub},info){
         const postIndex=db.posts.findIndex((post) => post.id===args.id)
         if(postIndex===-1)
             throw new error("Post doesn't exist.")
@@ -118,12 +123,21 @@ const Mutation = {
         const deletedPosts=db.posts.splice(postIndex,1)
         
         db.comments=db.comments.filter((comment) => comment.post!==args.id)
+        if(deletedPosts[0].published){
+            pubsub.publish('post',{
+                post:{
+                    mutation:'DELETED',
+                    data:deletedPosts[0]
+                }
+            })
+        }
 
         return deletedPosts[0]
     },
 
-    updatePost(parent,args,{db},info){
+    updatePost(parent,args,{db,pubsub},info){
         const post=db.posts.find((post) => post.id===args.id)
+        const originalPost={...post}
 
         if(!post){
             throw new Error("Post not found")
@@ -139,6 +153,29 @@ const Mutation = {
 
         if(typeof args.data.published==="boolean"){
             post.published=args.data.published
+
+            if(originalPost.published && !post.published){
+                pubsub.publish('post',{
+                    post:{
+                        mutation:'DELETED',
+                        data:originalPost
+                    }
+                })
+            } else if(!originalPost.published && post.published){
+                pubsub.publish('post',{
+                    post:{
+                        mutation:'CREATED',
+                        data:post
+                    }
+                })
+            }
+        } else if(post.published){
+            pubsub.publish('post',{
+                post:{
+                    mutation:'UPDATED',
+                    data:post
+                }
+            })
         }
 
         return post
